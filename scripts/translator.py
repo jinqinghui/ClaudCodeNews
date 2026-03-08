@@ -273,8 +273,10 @@ def translate_items(items, config):
             combined = f"# {title}\n\n{content}"
             translated = translate(combined, config)
         except RuntimeError:
-            logger.exception("Failed to translate '%s', skipping", title)
-            continue
+            logger.warning(
+                "Failed to translate '%s', using original content", title
+            )
+            translated = combined
 
         # Extract the translated title from the first heading line
         translated_lines = translated.strip().splitlines()
