@@ -208,18 +208,35 @@ def _resolve_relative_urls(content, source_url):
         dir_path = file_path.rsplit("/", 1)[0] + "/" if "/" in file_path else ""
         base_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{ref}/{dir_path}"
 
-    def _replace_url(match):
+    def _resolve(url):
+        """Resolve a single URL if relative."""
+        if url.startswith(("http://", "https://", "//", "#", "mailto:")):
+            return url
+        return urljoin(base_url, url)
+
+    def _replace_md_url(match):
         prefix = match.group(1)  # ![ or [
         alt = match.group(2)
         url = match.group(3)
-        # Only resolve relative URLs (skip absolute, protocol-relative, anchors)
-        if url.startswith(("http://", "https://", "//", "#")):
-            return match.group(0)
-        resolved = urljoin(base_url, url)
-        return f"{prefix}{alt}]({resolved})"
+        return f"{prefix}{alt}]({_resolve(url)})"
 
     # Match markdown images ![alt](url) and links [text](url)
-    return re.sub(r"(!?\[)([^\]]*)\]\(([^)]+)\)", _replace_url, content)
+    content = re.sub(r"(!?\[)([^\]]*)\]\(([^)]+)\)", _replace_md_url, content)
+
+    # Match HTML src="..." and href="..." attributes (img, video, source, a tags)
+    def _replace_html_attr(match):
+        attr = match.group(1)  # src or href
+        quote = match.group(2)
+        url = match.group(3)
+        return f'{attr}={quote}{_resolve(url)}{quote}'
+
+    content = re.sub(
+        r"""(src|href)\s*=\s*(["'])((?:(?!\2).)+)\2""",
+        _replace_html_attr,
+        content,
+    )
+
+    return content
 
 
 def write_translated_file(title, translated_content, source_url, date_str, config, slug_title=None):
