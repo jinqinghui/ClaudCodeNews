@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Claude Code 技巧中文站',
   description: 'Claude Code 使用技巧的中文翻译与索引',
-  base: '/ClaudCodeNews/',
+  base: process.env.CI ? '/ClaudCodeNews/' : '/',
   lang: 'zh-CN',
   srcExclude: ['design.md'],
 
