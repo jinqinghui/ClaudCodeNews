@@ -1,4 +1,27 @@
 import { defineConfig } from 'vitepress'
+import fs from 'node:fs'
+import path from 'node:path'
+import matter from 'gray-matter'
+
+function getTipsSidebar() {
+  const tipsDir = path.resolve(__dirname, '../tips')
+  if (!fs.existsSync(tipsDir)) return []
+
+  const files = fs.readdirSync(tipsDir)
+    .filter(f => f.endsWith('.md') && f !== 'index.md')
+    .sort()
+    .reverse() // 最新的排前面
+
+  return files.map(f => {
+    const content = fs.readFileSync(path.join(tipsDir, f), 'utf-8')
+    const { data } = matter(content)
+    const slug = f.replace(/\.md$/, '')
+    return {
+      text: data.title || slug,
+      link: `/tips/${slug}`
+    }
+  })
+}
 
 export default defineConfig({
   title: 'Claude Code 技巧中文站',
@@ -17,6 +40,7 @@ export default defineConfig({
       {
         text: '技巧列表',
         link: '/tips/',
+        items: getTipsSidebar()
       }
     ],
 
