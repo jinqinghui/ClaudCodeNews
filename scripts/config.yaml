@@ -1,0 +1,33 @@
+sources:
+  - name: claude-code-docs
+    type: github
+    owner: anthropics
+    repo: claude-code
+    paths:
+      - "README.md"
+      - "docs/**/*.md"
+
+  - name: anthropic-docs
+    type: web
+    urls:
+      - "https://docs.anthropic.com/en/docs/claude-code/overview"
+
+llm:
+  primary:
+    provider: gemini
+    model: gemini-1.5-flash
+    env_key: GEMINI_API_KEY
+  fallback:
+    provider: deepseek
+    model: deepseek-chat
+    env_key: DEEPSEEK_API_KEY
+
+output:
+  tips_dir: docs/tips
+  manifest: scripts/processed.json
+
+translation:
+  system_prompt: |
+    你是一位资深的 Linux 性能工程师和开发者。请将以下关于 Claude Code 的技术技巧翻译成中文。
+    要求：术语准确（如：context window 译为上下文窗口，token 译为 Token，prompt 译为提示词），
+    保持 Markdown 格式，语气专业且简洁。不要翻译代码块中的内容。
