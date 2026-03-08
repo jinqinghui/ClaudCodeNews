@@ -10,6 +10,7 @@ import os
 import re
 import unicodedata
 from datetime import datetime
+from urllib.parse import urljoin
 
 import requests
 import yaml
@@ -189,6 +190,38 @@ def generate_slug(title):
     return slug
 
 
+def _resolve_relative_urls(content, source_url):
+    """Convert relative image/link URLs in Markdown to absolute URLs.
+
+    Uses the source URL to determine the base directory for resolution.
+    For GitHub blob URLs, converts to raw.githubusercontent.com equivalents.
+    """
+    # Determine the base URL for resolving relative paths
+    base_url = source_url
+    # Convert GitHub blob URLs to raw URLs for asset resolution
+    gh_match = re.match(
+        r"https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)", source_url
+    )
+    if gh_match:
+        owner, repo, ref, file_path = gh_match.groups()
+        # Base is the directory containing the file
+        dir_path = file_path.rsplit("/", 1)[0] + "/" if "/" in file_path else ""
+        base_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{ref}/{dir_path}"
+
+    def _replace_url(match):
+        prefix = match.group(1)  # ![ or [
+        alt = match.group(2)
+        url = match.group(3)
+        # Only resolve relative URLs (skip absolute, protocol-relative, anchors)
+        if url.startswith(("http://", "https://", "//", "#")):
+            return match.group(0)
+        resolved = urljoin(base_url, url)
+        return f"{prefix}{alt}]({resolved})"
+
+    # Match markdown images ![alt](url) and links [text](url)
+    return re.sub(r"(!?\[)([^\]]*)\]\(([^)]+)\)", _replace_url, content)
+
+
 def write_translated_file(title, translated_content, source_url, date_str, config, slug_title=None):
     """Write a translated Markdown file with YAML frontmatter.
 
@@ -231,6 +264,9 @@ def write_translated_file(title, translated_content, source_url, date_str, confi
         f'original_url: "{source_url}"\n'
         f'---\n'
     )
+
+    # Resolve relative URLs in content to absolute URLs
+    translated_content = _resolve_relative_urls(translated_content, source_url)
 
     body = (
         f"\n# {title}\n"
